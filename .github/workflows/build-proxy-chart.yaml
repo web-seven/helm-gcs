@@ -1,0 +1,43 @@
+name: Build Proxy Chart
+on: 
+  push:
+    tags:
+      - 1.*
+
+env:
+  TAG: $(git describe --tags --abbrev=0)
+
+jobs:
+  build:
+    name: Build NodeJS version
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: proxy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Prepare repository
+        run: git fetch --unshallow
+      - name: Build Docker image
+        run: docker build -f ./Dockerfile -t ghcr.io/web-seven/helm-gcs-plugin-proxy:${{ env.TAG }} .
+      - name: Login to Github Docker Registry
+        run: docker login --username ${GITHUB_ACTOR} --password ${{ secrets.GITHUB_TOKEN }} ghcr.io
+      - name: Push Docker image to registry.
+        run: docker push ghcr.io/web-seven/helm-gcs-plugin-proxy:${{ env.TAG }}
+      - name: Create Helm Chart
+        working-directory: charts/helm-gcs-proxy
+        run: |
+          helm plugin install https://github.com/web-seven/helm-github.git
+          helm repo add helm-github github://web-seven/helm-gcs
+          helm package --version ${{ env.TAG }} --app-version ${{ env.TAG }} ./
+          git config --global user.email "${GITHUB_ACTOR}"
+          git config --global user.name "${GITHUB_ACTOR}"
+          export ORIGIN_TAG=${{ env.TAG }}
+          git tag -a helm-gcs-proxy-$ORIGIN_TAG -m ''
+          git push origin helm-gcs-proxy-$ORIGIN_TAG && helm github push helm-gcs-proxy-$ORIGIN_TAG.tgz helm-github master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   
+      
