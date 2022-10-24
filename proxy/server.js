@@ -32,7 +32,7 @@ const server = http.createServer((req, res) => {
         schema = 'https';
     }
 
-    exec(`export GOOGLE_APPLICATION_CREDENTIALS=${token} && helm repo add ${repoName} gs://${repoName} && helm repo update `, (error, stdout, stderr) => {
+    exec(`export GOOGLE_APPLICATION_CREDENTIALS=${token} && helm repo add ${repoName} gs://${repoName} && helm repo update `, {maxBuffer: (2048 * 2048) }, (error, stdout, stderr) => {
         if (error || stderr) {
             res.statusCode = 500;
             console.debug(error);
@@ -46,7 +46,7 @@ const server = http.createServer((req, res) => {
             const pullCommand = `export GOOGLE_APPLICATION_CREDENTIALS=${token} && helm pull --destination /tmp ${chartUrl}`;
             let pullResponse = '';
             try {
-                pullResponse = execSync(pullCommand).toString();
+                pullResponse = execSync(pullCommand, {maxBuffer: (2048 * 2048) },).toString();
             } catch (error) {
                 res.statusCode = 500;
                 console.debug(error);
@@ -66,7 +66,7 @@ const server = http.createServer((req, res) => {
                 res.end(data);
             });
         } else {
-            exec(`export GOOGLE_APPLICATION_CREDENTIALS=${token} && cat $(helm env HELM_REPOSITORY_CACHE)/${repoName}-index.yaml `, (error, stdout, stderr) => {
+            exec(`export GOOGLE_APPLICATION_CREDENTIALS=${token} && cat $(helm env HELM_REPOSITORY_CACHE)/${repoName}-index.yaml `, {maxBuffer: (2048 * 2048) }, (error, stdout, stderr) => {
                 if (error || stderr) {
                     res.statusCode = 500;
                     console.debug(error);
